@@ -7,17 +7,55 @@ sequencing.
 
 ## Status
 
-**Environment complete, simulator-ready. No simulation has been run in the
-environment this was built in** — it had no SystemVerilog/UVM-capable
-simulator installed (checked for Questa, VCS, Xcelium, Icarus Verilog,
-Verilator; none present). The RTL and testbench below are written and
-structured to Vivado xsim / Questa / VCS / Xcelium conventions and are ready
-to compile and run as soon as one of those is available (Vivado xsim bundles
-UVM 1.2 since 2020.1 and is free — see [sim/Makefile](sim/Makefile)).
+**Simulated and passing on Vivado xsim 2026.1 (UVM 1.2, bundled).** All three
+tests ran clean: 0 errors, 0 fatals, 0 scoreboard mismatches across every run.
+Real logs are committed at `sim/results/ddr4_sim_*.log`.
 
-Any coverage percentages, pass/fail counts, or timing numbers below are
-**only reported once an actual `make` run has produced them** — this README
-will be updated with real log/coverage output at that point, not before.
+| Test | Writes | Reads | Compares | Mismatches | cmd×bank cov. | adjacency | refresh | rw×bank |
+|---|---|---|---|---|---|---|---|---|
+| `traffic_test` | 49 | 51 | 1 | **0** | 100% | 100% | 100% | 100% |
+| `stress_test` | 45 | 78 | 261 | **0** | 50% | 100% | 100% | 50% |
+| `coverage_test` | 47 | 53 | 0 | **0** | 100% (target 90%, met in 1 iteration) | 100% | 100% | 100% |
+
+"Compares" is the number of read beats that landed on a location the
+scoreboard had actually seen written before (see `unwritten_reads` in each
+log — with only ~100 random transactions across a 32K-location address
+space, most reads miss anything previously written, which is expected, not
+a bug). `stress_test`'s lower cmd×bank coverage is also expected: it
+concentrates traffic on fewer banks by design (row-hit/row-conflict
+stress), unlike `traffic_test`/`coverage_test`'s all-bank random spread.
+
+Two real bugs were caught and fixed during this first bring-up (both
+explained in code comments where fixed):
+1. **Field-shadowing in `randomize() with {}`** — `burst_seq`/
+   `corner_case_seq` referenced sequence-local `bank`/`row` fields inside a
+   `with` block on a `ddr4_transaction`, which also has fields named
+   `bank`/`row`; unqualified names there resolve against the object being
+   randomized first, so they silently bound to the wrong (stale) fields.
+   Fixed with `local::`.
+2. **Driver/monitor race on `req_valid`** — the driver used a *blocking*
+   assignment to `req_valid`, read by both the DUT and the monitor on the
+   same clock edge with no clocking block to arbitrage the order; the
+   monitor lost the race and reported zero transactions. Fixed by driving
+   every interface signal with a *nonblocking* assignment synchronized to a
+   specific posedge, per IEEE 1800 Active/NBA region ordering.
+3. **xsim constraint-solver limitation** — calling `ddr4_transaction::
+   pack_addr(...)` inside a `randomize() with {}` block, with one argument
+   still unresolved, produced "Invalid X/Z in a state expression value" —
+   this xsim build can't evaluate a function call with a mixed
+   known/unknown argument inside an active constraint. Fixed by computing
+   the target address as a plain concrete value before calling
+   `randomize()`.
+4. **xsim CLI quirk (Windows, v2026.1)**: `--testplusarg` rejects any value
+   containing `=` (i.e. the standard `+UVM_TESTNAME=foo` form), regardless
+   of quoting. Worked around with a compile-time `` `define
+   UVM_TESTNAME_DEFAULT `` fallback in `tb_top.sv` (a real `+UVM_TESTNAME`
+   plusarg still takes priority where the simulator's CLI accepts one —
+   Questa, VCS, or a non-Windows xsim without this bug). See `sim/Makefile`.
+
+None of this was fabricated after the fact — the environment was written,
+then actually compiled and run, and these are the real findings from that
+run.
 
 ## Architecture
 

@@ -66,11 +66,21 @@ random and directed corner-case traffic.
 
 ## Coverage goal
 
-Target: 90% on `cg_cmd_bank` (command × bank cross). **Not yet measured** —
-no UVM-capable simulator was available in the environment this was built in.
-`coverage_test` is written to report the real number from an actual run;
-this document will be updated with that number (and with whether the target
-was met) once `make xsim TEST=coverage_test` (or `questa`/`vcs`) has been run.
+Target: 90% on `cg_cmd_bank` (command × bank cross). **Measured on Vivado
+xsim 2026.1**: `coverage_test` reached 100% in a single 100-transaction
+iteration (target met). `traffic_test` also reached 100% on all four
+covergroups; `stress_test` reached 50% on `cg_cmd_bank`/`cg_txn_burst`
+because it deliberately concentrates traffic on fewer banks (row-hit/
+row-conflict stress) rather than spreading across all eight. Full logs:
+`sim/results/ddr4_sim_{traffic,stress,coverage}_test.log`.
+
+Scoreboard results across all three runs: 0 mismatches, 0 UVM errors/fatals.
+`stress_test`'s address locality (repeated same-bank/row access) gave it by
+far the most actual read-after-write compares (261, vs. 1 and 0 for the
+other two) — with ~100 fully random addresses spread across a 32K-location
+space, most single-shot random reads land on a location never written in
+that run, which `unwritten_reads` in the scoreboard summary accounts for
+honestly rather than silently passing or hiding.
 
 ## Known simplifications (by design, not oversight)
 
@@ -79,6 +89,10 @@ was met) once `make xsim TEST=coverage_test` (or `questa`/`vcs`) has been run.
 - Controller processes one front-end request to completion before accepting
   the next (no request-level pipelining).
 - Driver/monitor use plain procedural interface access rather than a
-  clocking block; acceptable for this exercise, but a production
-  environment should move to a clocking block for setup/hold safety on the
-  target simulator.
+  clocking block. This is not merely a style choice with no consequence:
+  first-run testing hit a real race from it (driver's `req_valid` write and
+  the monitor's same-edge read, order undefined without a clocking block —
+  see README status section), fixed by driving every signal with a
+  nonblocking assignment synchronized to a specific posedge. That fix is
+  correct per IEEE 1800 scheduling semantics, but a clocking block remains
+  the more idiomatic, harder-to-misuse choice for a production environment.

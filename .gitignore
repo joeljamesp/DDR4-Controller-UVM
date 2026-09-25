@@ -17,10 +17,17 @@ ucli.key
 *.shm/
 DVEfiles/
 *.fsdb
+xsim.covdb/
+.Xil/
 
-# Logs (results are committed intentionally except raw run logs)
+# Logs: ignored by default, but the three real per-test run logs in
+# sim/results/ are committed intentionally as evidence of an actual run
+# (see README.md / VERIFICATION_PLAN.md).
 *.log
 !sim/results/README.md
+!sim/results/ddr4_sim_traffic_test.log
+!sim/results/ddr4_sim_stress_test.log
+!sim/results/ddr4_sim_coverage_test.log
 
 # Editor/OS cruft
 .vscode/

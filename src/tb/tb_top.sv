@@ -28,7 +28,15 @@ module tb_top;
 
   initial begin
     uvm_config_db#(virtual ddr4_if)::set(null, "*", "vif", bus);
+    // A +UVM_TESTNAME plusarg (standard on Questa/VCS/most xsim builds)
+    // always takes priority over this default; UVM_TESTNAME_DEFAULT is a
+    // compile-time fallback for simulator CLIs where passing a plusarg
+    // containing '=' is broken (see sim/Makefile xsim target).
+`ifdef UVM_TESTNAME_DEFAULT
+    run_test(`UVM_TESTNAME_DEFAULT);
+`else
     run_test();
+`endif
   end
 
   // Waveform dump (only meaningful under a simulator that actually runs)

@@ -16,6 +16,11 @@ RTL_FLIST  := rtl_filelist.f
 TB_FLIST   := tb_filelist.f
 INCDIRS    := -i ../src/rtl -i ../src/tb
 
+# Requires Vivado's settings64.(sh|bat) to have been sourced so
+# XILINX_VIVADO points at the install (needed to locate the bundled
+# uvm_macros.svh include directory below).
+UVM_INC    := $(XILINX_VIVADO)/data/xsim/system_verilog/uvm_include
+
 .PHONY: all xsim questa vcs clean help
 
 all: help
@@ -28,13 +33,21 @@ $(RESULTS):
 
 # ------------------------------------------------------------------------
 # Xilinx Vivado xsim (bundles UVM 1.2 since Vivado 2020.1)
+#
+# NOTE: this xsim build's CLI parser (at least on Windows, v2026.1)
+# rejects any --testplusarg value containing '=' (e.g. UVM_TESTNAME=foo),
+# regardless of quoting/escaping -- a parser bug, not a usage error (we
+# verified with `--testplusarg A=B` alone: it always fails the same way).
+# TEST is therefore passed as a compile-time define instead; see the
+# `ifdef UVM_TESTNAME_DEFAULT` fallback in tb_top.sv. A real +UVM_TESTNAME
+# plusarg still takes priority when the target simulator's CLI can accept
+# one (Questa/VCS below, or a non-Windows xsim without this bug).
 # ------------------------------------------------------------------------
 xsim: $(RESULTS)
 	xvlog -sv $(INCDIRS) -f $(RTL_FLIST)
-	xvlog -sv $(INCDIRS) -f $(TB_FLIST)
+	xvlog -sv -L uvm $(INCDIRS) -i "$(UVM_INC)" -d 'UVM_TESTNAME_DEFAULT="$(TEST)"' -f $(TB_FLIST)
 	xelab -debug typical tb_top -s ddr4_sim -L uvm
-	cd $(RESULTS) && xsim ../ddr4_sim -runall -testplusarg "UVM_TESTNAME=$(TEST)" \
-		-log ddr4_sim_$(TEST).log
+	cd $(RESULTS) && xsim ../ddr4_sim -runall -log ddr4_sim_$(TEST).log
 
 # ------------------------------------------------------------------------
 # Siemens Questa/ModelSim
