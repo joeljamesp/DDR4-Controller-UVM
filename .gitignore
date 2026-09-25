@@ -1,0 +1,29 @@
+# Simulator build artifacts / work libraries
+work/
+xsim.dir/
+csrc/
+simv
+simv.daidir/
+*.vcd
+*.wlf
+*.wdb
+transcript
+vsim.wlf
+ucli.key
+.vcs_lib_lock
+*.jou
+*.pb
+*.vstf
+*.shm/
+DVEfiles/
+*.fsdb
+
+# Logs (results are committed intentionally except raw run logs)
+*.log
+!sim/results/README.md
+
+# Editor/OS cruft
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
