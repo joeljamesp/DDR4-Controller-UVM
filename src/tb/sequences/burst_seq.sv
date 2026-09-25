@@ -28,7 +28,7 @@ class burst_seq extends uvm_sequence #(ddr4_transaction);
       tr = ddr4_transaction::type_id::create("tr");
       start_item(tr);
       if (!tr.randomize() with {
-            addr == ddr4_transaction::pack_addr(bank, row, tr.col);
+            addr == ddr4_transaction::pack_addr(local::bank, local::row, tr.col);
           })
         `uvm_error("BURST_SEQ", "transaction randomize() failed")
       finish_item(tr);

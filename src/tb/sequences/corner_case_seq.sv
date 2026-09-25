@@ -34,7 +34,7 @@ class corner_case_seq extends uvm_sequence #(ddr4_transaction);
       tr = ddr4_transaction::type_id::create("tr");
       start_item(tr);
       if (!tr.randomize() with {
-            addr == ddr4_transaction::pack_addr(bank, row_a, tr.col);
+            addr == ddr4_transaction::pack_addr(local::bank, local::row_a, tr.col);
           })
         `uvm_error("CORNER_SEQ", "transaction randomize() failed")
       finish_item(tr);
@@ -42,7 +42,7 @@ class corner_case_seq extends uvm_sequence #(ddr4_transaction);
       tr = ddr4_transaction::type_id::create("tr");
       start_item(tr);
       if (!tr.randomize() with {
-            addr == ddr4_transaction::pack_addr(bank, row_b, tr.col);
+            addr == ddr4_transaction::pack_addr(local::bank, local::row_b, tr.col);
           })
         `uvm_error("CORNER_SEQ", "transaction randomize() failed")
       finish_item(tr);
